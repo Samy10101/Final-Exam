@@ -1,0 +1,162 @@
+---
+title: "Examen Final"
+authors: "Jean Samy Francois, Israel Jean Francois, Ansy Valbrun et Kervens Delva"
+date: "2024-06-13"
+output: word_document 
+---
+
+
+# Introduction | Choix des variables et explications
+
+Nous avons choisi les variables de taux de change, d'exportations, d'importations, de croissance du PIB, de l'inflation (à l'aide de l'indice des prix à la consommation) et d'IDE (investissements directs étrangers) pour analyser la performance économique d'Haïti sur une période de 34 ans, de 1988 à 2022. Le taux de change étant le prix auquel deux monnaies s’échangent, représente un indicateur important pour mesurer la compétitivité de la monnaie nationale sur les marchés internationaux.  Avec les importations, on s’attend à un signe négatif (-) car toute augmentation du taux de change côté à l’incertain décourage les importations et quant aux exportations ; elles impactent le taux de change positivement car leur augmentation correspond à une dévaluation/dépréciation  de la monnaie nationale et cette relation avec le taux de change est similaire pour la croissance économique puisque cette dernière dépend aussi des exportations.  Les IDE sont un indicateur clé des flux de capitaux étrangers entrants mais sachant qu'ils dépendent de la stabilité politique et des règlementations économiques, le signe attendu du taux de change ne sera pas vraiment clair. Et enfin, l’impact général de l’inflation qui est toujours un phénomène monétaire et un facteur déterminant du taux de change, peut fluctuer à cause des différentes natures de son influence sur ce dernier. 
+
+
+
+
+```{r}
+library(wbstats)
+library(ggplot2)
+library(dplyr)
+```
+
+
+
+
+# Importations de données 
+
+```{r data search and import }
+
+
+taux_change <- wb_data(indicator = "PA.NUS.FCRF", country = "HTI", start_date = 1988, end_date = 2022)
+
+exportations<- wb_data(indicator= "NE.EXP.GNFS.ZS" , country = "HTI" , start_date = 1988, end_date = 2022)
+
+importations<- wb_data(indicator = "NE.IMP.GNFS.CD", country = "HTI", start_date = 1988, end_date = 2022)
+
+IDE<- wb_data(indicator="BX.KLT.DINV.WD.GD.ZS", country = "HTI", start_date= 1988, end_date = 2022)
+
+Inflation<- wb_data(indicator="FP.CPI.TOTL.ZG", country="HTI", start_date= 1988, end_date = 2022)
+
+croiss_eco<- wb_data(indicator="NY.GDP.MKTP.KD.ZG", country="HTI",start_date= 1988, end_date = 2022)  
+
+# Nettoyage des tableaux
+taux_change<- taux_change[, c(3, 4, 5)]
+exportations<- exportations[, c(5)]
+importations<- importations[, c(5)]
+IDE<- IDE[, c(5)]
+Inflation<- Inflation[, c(5)]
+Croiss_eco <- croiss_eco[, c(5)]  
+
+  
+# Tableaux combinés
+tableau_combine<- cbind(taux_change, exportations,importations,IDE,Inflation,croiss_eco)
+
+# Renommons les variables
+colnames(tableau_combine)<- c("Pays", "Date", "Tauxdechange", "Exportations", "Importations", "IDE","taux d'inflation","croissance economique")
+tableau_combine<-tableau_combine[,c(1,2,3,4,5,6,7,12)]
+tableau_combine
+colnames(tableau_combine)<- c("Pays", "Date", "Tauxdechange", "Exportations", "Importations", "IDE","inflation","croissance")
+tableau_combine
+
+```
+
+
+
+Nuage de points
+===============================================================================
+
+# Représentation grapique
+
+### graphe de la regression des exportations sur le taux de change
+
+```{r graphe 1}
+ggplot(data=tableau_combine, mapping=aes(x=Exportations,y=Tauxdechange)) + geom_point(color="navy")+
+labs(title = "Nuage de points|Exportaions ")+geom_smooth(method = "lm")
+```
+
+
+### graphe de la régression de la croissance du PIB sur le Taux de change
+```{r graphe 2}
+ggplot(data=tableau_combine, mapping=aes(x=croissance,y=Tauxdechange)) + geom_point(color="aquamarine")+
+labs(title = "Nuage de points|croissance ")+geom_smooth(method = "lm")
+
+```
+
+
+### graphe de la régression des importations sur le Taux de change
+
+```{r graphe 3}
+ggplot(data=tableau_combine, mapping=aes(x=Importations,y=Tauxdechange)) + geom_point(color="orange")+
+labs(title = "Nuage de points|Inportaions ")+geom_smooth(method = "lm")
+```
+
+### graphe de la régression de l'inflation des prix à la consommation sur le Taux de change
+
+```{r graphe 4}
+ggplot(data=tableau_combine, mapping=aes(x=inflation ,y=Tauxdechange)) + geom_point(color="palegreen")+
+labs(title = "Nuage de points|inflation ")+geom_smooth(method = "lm")
+```
+
+
+###graphe de la régression de l'IDE sur le Taux de change
+
+```{r graphe 5}
+ggplot(data=tableau_combine, mapping=aes(x=IDE,y=Tauxdechange)) + geom_point(color="gold")+
+labs(title = "Nuage de points|IDE ")+geom_smooth(method = "lm")
+
+```
+
+
+
+# Résultats de la régression linéaire
+
+Dans le tableau suivant se trouve les resultats de la régression des exportations, des importations, de l'inflation des prix à la consommation, de la Croissance du PIB et de l'IDE sur le Taux de Change: 
+
+```{r reg table}
+# Régression linéaire 
+
+Mod_reg <- lm(Tauxdechange~inflation + Importations + Exportations + croissance + IDE, data = tableau_combine)
+summary(Mod_reg)
+
+## formation du tableau
+
+Stat_01<- data.frame(summary(Mod_reg)$coefficients[,c(1,4)])
+R.Squared <- summary(Mod_reg)$r.squared
+adj.Rsquared <- summary(Mod_reg)$adj.r.squared
+gg_stat01 <- summary(Mod_reg)$fstatistic[1]
+lmp <- function (modelobject) {
+    if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+    f <- summary(modelobject)$fstatistic
+    p <- pf(f[1],f[2],f[3],lower.tail=F)
+    attributes(p) <- NULL
+    return(p)
+}
+p_value <- lmp(Mod_reg)
+Stat_description <- c("R_carre","R2_adjusted","Stat_Fisher","P_Value","R_carre","R2_adjusted")
+Statistique1.1 <- c(R.Squared,adj.Rsquared,gg_stat01,p_value,R.Squared,adj.Rsquared)
+Stat_02 <- data.frame(Stat_description,Statistique1.1)
+tableau <- data.frame(Stat_01,Stat_02) 
+tableau
+```
+
+
+
+### Nuage de points valeurs résiduelles vs valleurs estimées 
+
+graphique contenant les valeurs résiduelles de la régression et les valeurs estimées
+
+```{r graphe 6}
+resid <- residuals(Mod_reg)
+fitt_val <- fitted.values(Mod_reg)
+df_resid <- data.frame(resid, fitt_val)
+plot(df_resid$fitt_val,df_resid$resid, pch=20, main='Analyse des residus',
+     xlab='Valeurs estimees', ylab='Erreurs residuelles')
+abline(lm(resid ~ fitt_val), col='skyblue', lwd=2)
+```
+
+
+
+### Commentaires
+
+Au préalable, on s’attendait à ce que les points soient tous répartis de manière homogène aléatoire autour de l'axe y = 0 en examinant le graphe de gauche à droite , ce qui indiquerait que le modèle linéaire est approprié pour expliquer la variation de la variable dépendante. Cependant, on remarque  une légère tendance à l'hétéroscédasticité c'est-à-dire que l’écart entre les valeurs observées et les valeurs estimées devient plus grand à droite, ce qui pourrait être dû à la présence d'observations atypiques vis-à-vis des données sur les  variables choisies.  
+
